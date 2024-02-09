@@ -33,7 +33,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     assert_eq!(db_session_key.len(), 40);
     sess_key.copy_from_slice(db_session_key.as_slice());
 
-    let client_encryption = proof_seed.into_header_crypto(
+    let client_encryption = proof_seed.into_server_header_crypto(
         &NormalizedString::new(&packet.username).unwrap(),
         sess_key,
         packet.client_proof,
@@ -65,7 +65,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
             billing_flags: BillingPlanFlags::empty(),
             billing_rested: 0,
             billing_time: 0,
-            expansion: wow_world_messages::wrath::Expansion::WrathOfTheLichLing,
+            expansion: wow_world_messages::wrath::Expansion::WrathOfTheLichKing,
         },
     }
     .astd_send_to_client(client)

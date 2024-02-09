@@ -27,12 +27,15 @@ rstar = { version = "0.9" }
 hex = { version = "0.4" }
 cmdparse = { version = "0.1" }
 
-wow_srp = { version = "0.6.0" }
+wow_srp = { git="https://github.com/gtker/wow_srp.git", rev="7b019d589bdd11e7b206d250c4b85b968d3945ee" }
 wow_dbc = { version = "0.2", features = ["wrath"] }
-wow_world_base = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features=["extended"] }
-wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features=["wrath", "async-std", "chrono"] }
-wow_items = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features = ["wrath"] }
+wow_world_base = { path = "../../wow_messages/wow_world_base", features=["extended"] }
+wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std", "chrono"] }
+wow_items = { path = "../../wow_messages/wow_items", features = ["wrath"] }
 
 #For local testing purposes, one may want to switch to this local path version of wow_world_messages. Do not commit with this though
 #wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std", "chrono"] }
+# wow_world_base = { git="https://github.com/gtker/wow_messages.git", rev="83f8695da8b2b1abf6e01c967d89b004ccf859b0", features=["extended"] }
+# wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="83f8695da8b2b1abf6e01c967d89b004ccf859b0", features=["wrath", "async-std", "chrono"] }
+# wow_items = { git="https://github.com/gtker/wow_messages.git", rev="83f8695da8b2b1abf6e01c967d89b004ccf859b0", features = ["wrath"] }
 

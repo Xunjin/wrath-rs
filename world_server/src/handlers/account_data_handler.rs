@@ -5,6 +5,7 @@ use crate::world::prelude::GameObject;
 use crate::world::World;
 use crate::ClientManager;
 use crate::{character::*, packet::ServerMessageExt};
+use std::io::Cursor;
 use wow_world_messages::wrath::{
     CacheMask, CMSG_REQUEST_ACCOUNT_DATA, CMSG_UPDATE_ACCOUNT_DATA, SMSG_ACCOUNT_DATA_TIMES, SMSG_UPDATE_ACCOUNT_DATA,
     SMSG_UPDATE_ACCOUNT_DATA_COMPLETE,
@@ -38,7 +39,7 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientMan
 }
 
 async fn create_empty_account_data_rows(client_manager: &ClientManager, account_id: u32) -> Result<()> {
-    let mask = CacheMask::GlobalCache.as_int() as u8;
+    let mask = CacheMask::GLOBAL_CACHE as u8;
     for i in 0..8u8 {
         if mask & (1 << i) > 0 {
             client_manager.auth_db.create_account_data(account_id, i).await?;
@@ -49,7 +50,7 @@ async fn create_empty_account_data_rows(client_manager: &ClientManager, account_
 }
 
 pub async fn create_empty_character_account_data_rows(realm_database: &RealmDatabase, character_id: u32) -> Result<()> {
-    let mask = CacheMask::PerCharacterCache.as_int() as u8;
+    let mask = CacheMask::PER_CHARACTER_CACHE as u8;
     for i in 0..8u8 {
         if mask & (1 << i) > 0 {
             realm_database.create_character_account_data(character_id, i).await?;
@@ -71,7 +72,6 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
         unix_time,
         unknown1: 1,
         mask,
-        data: masked_data.into(),
     }
     .astd_send_to_client(client)
     .await?;
@@ -80,7 +80,7 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
 }
 
 async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> Result<()> {
-    let mask = CacheMask::GlobalCache.as_int() as u32;
+    let mask = CacheMask::GLOBAL_CACHE as u32;
     let mut masked_data = vec![];
     for row in data {
         if mask & (1 << row.data_type) > 0 {
@@ -88,7 +88,18 @@ async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAcco
         }
     }
 
-    send_account_data_times(client, CacheMask::GlobalCache, masked_data).await
+    // Convert Vec<u32> to Vec<u8>
+    let mut bytes = vec![];
+    for &number in &masked_data {
+        bytes.extend(&number.to_le_bytes());
+    }
+
+    // Create a Cursor<Vec<u8>> for reading
+    let mut cursor = Cursor::new(bytes);
+
+    let cache_mask = CacheMask::read(&mut cursor)?;
+
+    send_account_data_times(client, cache_mask, masked_data).await
 }
 
 pub async fn send_character_account_data_times(realm_database: &RealmDatabase, character: &Character) -> Result<()> {
@@ -99,7 +110,7 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
 
     let data = realm_database.get_character_account_data(character.get_guid().guid() as u32).await?;
 
-    let mask = CacheMask::PerCharacterCache.as_int();
+    let mask = CacheMask::PER_CHARACTER_CACHE;
     let mut masked_data = vec![];
     for row in data {
         if mask & (1 << row.data_type) > 0 {
@@ -107,7 +118,18 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
         }
     }
 
-    send_account_data_times(&client, CacheMask::PerCharacterCache, masked_data).await
+    // Convert Vec<u32> to Vec<u8>
+    let mut bytes = vec![];
+    for &number in &masked_data {
+        bytes.extend(&number.to_le_bytes());
+    }
+
+    // Create a Cursor<Vec<u8>> for reading
+    let mut cursor = Cursor::new(bytes);
+
+    let cache_mask = CacheMask::read(&mut cursor)?;
+
+    send_account_data_times(&client, cache_mask, masked_data).await
 }
 
 pub async fn handle_csmg_update_account_data(
@@ -118,7 +140,7 @@ pub async fn handle_csmg_update_account_data(
 ) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
 
-    if 1 << data.data_type & CacheMask::GlobalCache.as_int() > 0 {
+    if 1 << data.data_type & CacheMask::GLOBAL_CACHE > 0 {
         let account_id = client
             .data
             .read()
@@ -131,7 +153,7 @@ pub async fn handle_csmg_update_account_data(
                 account_id,
                 data.unix_time,
                 data.data_type as u8,
-                data.decompressed_size,
+                data.compressed_data.len() as u32,
                 data.compressed_data.as_slice(),
             )
             .await?;
@@ -143,7 +165,7 @@ pub async fn handle_csmg_update_account_data(
                 character_id,
                 data.unix_time,
                 data.data_type as u8,
-                data.decompressed_size,
+                data.compressed_data.len() as u32,
                 &data.compressed_data,
             )
             .await?;
@@ -166,7 +188,7 @@ pub async fn handle_cmsg_request_account_data(
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     let (decompressed_size, account_data_bytes) = {
-        if 1 << data.data_type & CacheMask::GlobalCache.as_int() > 0 {
+        if 1 << data.data_type & CacheMask::GLOBAL_CACHE > 0 {
             let account_id = client
                 .data
                 .read()
