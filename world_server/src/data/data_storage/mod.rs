@@ -4,7 +4,7 @@ use async_std::{
     path::PathBuf,
 };
 use std::sync::Arc;
-use wow_dbc::wrath_tables::{area_trigger::AreaTriggerKey, chr_classes::ChrClasses, chr_races::ChrRaces};
+use wow_dbc::wrath_tables::{area_trigger::AreaTriggerKey, chr_classes::ChrClasses, chr_races::ChrRaces, spell};
 use wrath_realm_db::RealmDatabase;
 
 mod area_triggers;
@@ -16,6 +16,7 @@ pub struct DataStorage {
     dbc_chr_classes: Option<ChrClasses>,
     dbc_chr_map: Option<wow_dbc::wrath_tables::map::Map>,
     dbc_char_start_outfit: Option<wow_dbc::wrath_tables::char_start_outfit::CharStartOutfit>,
+    dbc_spells: Option<spell::Spell>,
     area_triggers: std::collections::hash_map::HashMap<AreaTriggerKey, AreaTrigger>,
 }
 
@@ -60,6 +61,7 @@ impl DataStorage {
         load_standard_dbc(dbc_path, &mut self.dbc_chr_classes).await?;
         load_standard_dbc(dbc_path, &mut self.dbc_chr_map).await?;
         load_standard_dbc(dbc_path, &mut self.dbc_char_start_outfit).await?;
+        load_standard_dbc(dbc_path, &mut self.dbc_spells).await?;
         self.load_area_triggers(dbc_path, realm_db).await?;
         info!("Finished loading DBC files");
         info!("Loading SQL data");
@@ -75,6 +77,7 @@ impl DataStorage {
         dbc_char_start_outfit,
         get_dbc_char_start_outfit
     );
+    define_dbc_getter!(spell::Spell, dbc_spells, get_dbc_spells);
 
     //Area triggers need special treatment from joint DBC and Mysql data sources, so they don't use
     //forward_dbc_getter

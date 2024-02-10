@@ -80,7 +80,7 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
 }
 
 async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> Result<()> {
-    let mask = CacheMask::GLOBAL_CACHE as u32;
+    let mask = CacheMask::GLOBAL_CACHE;
     let mut masked_data = vec![];
     for row in data {
         if mask & (1 << row.data_type) > 0 {
@@ -88,13 +88,11 @@ async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAcco
         }
     }
 
-    // Convert Vec<u32> to Vec<u8>
     let mut bytes = vec![];
     for &number in &masked_data {
         bytes.extend(&number.to_le_bytes());
     }
 
-    // Create a Cursor<Vec<u8>> for reading
     let mut cursor = Cursor::new(bytes);
 
     let cache_mask = CacheMask::read(&mut cursor)?;
@@ -118,13 +116,11 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
         }
     }
 
-    // Convert Vec<u32> to Vec<u8>
     let mut bytes = vec![];
     for &number in &masked_data {
         bytes.extend(&number.to_le_bytes());
     }
 
-    // Create a Cursor<Vec<u8>> for reading
     let mut cursor = Cursor::new(bytes);
 
     let cache_mask = CacheMask::read(&mut cursor)?;
